@@ -1,0 +1,9 @@
+syntax = "proto3";  // 프로토콜 버퍼의 버전을 지정합니다.
+
+package example;  // 패키지 이름을 정의합니다.
+
+// Sample 메시지 정의
+message Sample {
+  string name = 1;  // 'name' 필드, 태그 1
+  int32 age = 2;    // 'age' 필드, 태그 2
+}
