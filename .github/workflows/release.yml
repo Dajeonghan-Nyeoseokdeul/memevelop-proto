@@ -3,7 +3,7 @@ name: Protobuf Compile Workflow
 on:
   push:
     branches:
-      - main
+      - release
     paths:
       - 'origin/**/**/*.proto'
 
