@@ -8,4 +8,5 @@ message Sample {
   int32 age = 2;    // 'age' 필드, 태그 2
   string date = 3; // 'date' 필드, 태그 3
   string day = 4; // 'day'
+  string time = 5; // 'time'
 }
