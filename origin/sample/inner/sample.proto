@@ -7,4 +7,5 @@ message Sample {
   string name = 1;  // 'name' 필드, 태그 1
   int32 age = 2;    // 'age' 필드, 태그 2
   string date = 3; // 'date' 필드, 태그 3
+  string day = 4; // 'day'
 }
