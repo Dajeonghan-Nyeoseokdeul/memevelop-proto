@@ -6,44 +6,41 @@ on:
       - release
 
 jobs:
-  generate-sources:
+  generate-code:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
 
-    - name: Set up Node (for TypeScript)
-      uses: actions/setup-node@v2
-      with:
-        node-version: '14'
+      - name: Install protobuf and bufbuild
+        run: |
+          python -m pip install --upgrade pip
+          pip install grpcio-tools
+          curl -sSL https://github.com/bufbuild/buf/releases/download/v1.0.0-rc8/buf-Linux-x86_64 -o buf
+          chmod +x buf
+          sudo mv buf /usr/local/bin/buf
 
-    - name: Install protobuf compiler and ts-protoc-gen
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y protobuf-compiler
-        npm install -g ts-protoc-gen
+      - name: Sync Directory Structures
+        run: |
+          rsync -a --include='*/' --exclude='*' origin/ python/
+          rsync -a --include='*/' --exclude='*' origin/ typescript/
 
-    - name: Compile protobuf files
-      run: |
-        TS_PROTOC_GEN=$(npm bin)/protoc-gen-ts
-        chmod +x $TS_PROTOC_GEN  # Ensure it is executable
-        find origin -name "*.proto" | while read proto_file; do
-          dir_path=$(dirname $proto_file)
-          relative_path=${dir_path#origin/}
-          mkdir -p "python/$relative_path"
-          mkdir -p "typescript/$relative_path"
-          protoc --proto_path=$dir_path --python_out=python/$relative_path $proto_file
-          protoc --proto_path=$dir_path --plugin=protoc-gen-ts=$TS_PROTOC_GEN --js_out="import_style=commonjs,binary:typescript/$relative_path" --ts_out="typescript/$relative_path" $proto_file
-        done
+      - name: Generate Python Code
+        run: |
+          find origin -name '*.proto' -exec sh -c 'proto_path=${1#origin/}; mkdir -p `dirname "python/${proto_path%.proto}_pb2.py"`; python -m grpc_tools.protoc -I origin --python_out=python --grpc_python_out=python ${1}' _ {} \;
 
-    - name: Commit and Push Changes
-      uses: EndBug/add-and-commit@v7
-      with:
-        message: 'Auto-update generated protobuf code'
-        add: 'python/** typescript/**'
-        push: true
+      - name: Generate TypeScript Code
+        run: |
+          find origin -name '*.proto' -exec sh -c 'proto_path=${1#origin/}; mkdir -p `dirname "typescript/${proto_path%.proto}_pb.ts"`; buf generate --template buf.gen.yaml --path ${1} --output typescript' _ {} \;
+
+      - name: Commit and Push Changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: 'Auto-synced proto files and regenerated code'
+          add: 'python/** typescript/**'
+          default_author: github_actions
