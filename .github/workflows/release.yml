@@ -1,0 +1,56 @@
+name: Protobuf Compile Workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'origin/**/**/*.proto'
+
+jobs:
+  generate-sources:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Set up Node (for TypeScript)
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install protobuf compiler and ts-protoc-gen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y protobuf-compiler
+        npm install -g ts-protoc-gen
+
+    - name: Compile protobuf files
+      run: |
+        find origin -name "*.proto" | while read proto_file; do
+          # Extract directory path
+          dir_path=$(dirname $proto_file)
+          relative_path=${dir_path#origin/}
+
+          # Make sure output directories exist
+          mkdir -p "python/$relative_path"
+          mkdir -p "typescript/$relative_path"
+
+          # Compile to Python
+          protoc --proto_path=$dir_path --python_out=python/$relative_path $proto_file
+
+          # Compile to TypeScript
+          protoc --proto_path=$dir_path --plugin="protoc-gen-ts=$(npm bin)/protoc-gen-ts" --js_out="import_style=commonjs,binary:typescript/$relative_path" --ts_out="typescript/$relative_path" $proto_file
+        done
+
+    - name: Commit and Push Changes
+      uses: EndBug/add-and-commit@v7
+      with:
+        message: 'Auto-update generated protobuf code'
+        add: 'python/** typescript/**'
+        push: true
