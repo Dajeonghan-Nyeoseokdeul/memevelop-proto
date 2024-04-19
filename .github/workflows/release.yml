@@ -44,3 +44,4 @@ jobs:
           message: 'Auto-synced proto files and regenerated code'
           add: 'python/** typescript/**'
           default_author: github_actions
+          github_token: ${{ secrets.MAIN_TOKEN }}
