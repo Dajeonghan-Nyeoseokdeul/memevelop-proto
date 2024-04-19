@@ -27,17 +27,18 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y protobuf-compiler
         npm install -g ts-protoc-gen
-        echo "PATH=$PATH:$(npm get prefix)/bin" >> $GITHUB_ENV
 
     - name: Compile protobuf files
       run: |
+        TS_PROTOC_GEN=$(npm bin)/protoc-gen-ts
+        chmod +x $TS_PROTOC_GEN  # Ensure it is executable
         find origin -name "*.proto" | while read proto_file; do
           dir_path=$(dirname $proto_file)
           relative_path=${dir_path#origin/}
           mkdir -p "python/$relative_path"
           mkdir -p "typescript/$relative_path"
           protoc --proto_path=$dir_path --python_out=python/$relative_path $proto_file
-          protoc --proto_path=$dir_path --plugin="protoc-gen-ts=`npm bin`/protoc-gen-ts" --js_out="import_style=commonjs,binary:typescript/$relative_path" --ts_out="service=grpc-web:typescript/$relative_path" $proto_file
+          protoc --proto_path=$dir_path --plugin=protoc-gen-ts=$TS_PROTOC_GEN --js_out="import_style=commonjs,binary:typescript/$relative_path" --ts_out="typescript/$relative_path" $proto_file
         done
 
     - name: Commit and Push Changes
